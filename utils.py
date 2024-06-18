@@ -1,11 +1,13 @@
 """Utility module"""
 
 import os
+import base64
 import logging
 import json
 import argparse
 import getpass
 
+from cryptography.fernet import Fernet
 from smswithoutborders_libsig.keypairs import x25519
 
 logging.basicConfig(
@@ -135,6 +137,22 @@ class Password(argparse.Action):
                                          action. Defaults to None.
         """
         if values is None:
-            values = getpass.getpass("Enter Password:")
+            values = getpass.getpass("Enter Password: ")
 
         setattr(namespace, self.dest, values)
+
+
+def decrypt_llt(secret_key, llt_ciphertext):
+    """
+    Decrypts the given LLT.
+
+    Args:
+        secret_key (bytes): The secret key used for decryption.
+        llt_ciphertext (bytes): The LLT ciphertext to be decrypted.
+
+    Returns:
+        str: The decrypted plaintext.
+    """
+    key = base64.urlsafe_b64encode(secret_key)
+    fernet = Fernet(key)
+    return fernet.decrypt(llt_ciphertext).decode("utf-8")

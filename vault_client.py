@@ -98,3 +98,15 @@ def auth_an_entity(phone_number, **kwargs):
 
     response = stub.AuthenticateEntity(request)
     return response, None
+
+
+@grpc_call
+def list_stored_tokens(**kwargs):
+    """List an entity's stored tokens"""
+    stub = kwargs["stub"]
+    long_lived_token = kwargs.get("long_lived_token")
+
+    request = vault_pb2.ListEntityStoredTokenRequest(long_lived_token=long_lived_token)
+
+    response = stub.ListEntityStoredTokens(request)
+    return response, None

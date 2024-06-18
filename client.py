@@ -5,8 +5,17 @@ import logging
 import base64
 import argparse
 
-from vault_client import create_an_entity, auth_an_entity
-from utils import Password, generate_keypair_and_pk, store_binary, store_json
+from vault_client import create_an_entity, auth_an_entity, list_stored_tokens
+from utils import (
+    Password,
+    generate_keypair_and_pk,
+    store_binary,
+    store_json,
+    load_binary,
+    load_json,
+    load_keypair_object,
+    decrypt_llt,
+)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -34,7 +43,7 @@ def create_entity(phone_number, country_code, password):
 
     if init_res.requires_ownership_proof:
         logger.info("%s", init_res.message)
-        pow_res = input("Enter Proof Response:")
+        pow_res = input("Enter Proof Response: ")
         fin_res, fin_err = create_an_entity(
             phone_number=phone_number,
             country_code=country_code,
@@ -87,7 +96,8 @@ def auth_entity(phone_number, password):
         sys.exit(1)
 
     if init_res.requires_ownership_proof:
-        pow_res = input(init_res.message)
+        logger.info("%s", init_res.message)
+        pow_res = input("Enter Proof Response: ")
         fin_res, fin_err = auth_an_entity(
             phone_number=phone_number,
             client_publish_pub_key=base64.b64encode(pub_pk).decode(),
@@ -122,9 +132,24 @@ def auth_entity(phone_number, password):
 
 def list_tokens():
     """
-    To be implemented.
+    List an entity's stored tokens
     """
-    pass
+    server_data = load_json("data.json")
+    server_pk = server_data["server_device_id_pub_key"]
+    llt_ciphertext = server_data["long_lived_token"]
+    did_keypair = load_keypair_object(load_binary("did_keypair.bin"))
+    did_shared_key = did_keypair.agree(base64.b64decode(server_pk))
+    llt = decrypt_llt(did_shared_key, base64.b64decode(llt_ciphertext))
+
+    token_res, token_err = list_stored_tokens(long_lived_token=llt)
+
+    if token_err:
+        logger.error("%s - %s", token_err.code(), token_err.details())
+        sys.exit(1)
+
+    logger.info("%s", token_res.message)
+    logger.info("%s", token_res.stored_tokens)
+    sys.exit(0)
 
 
 def store_tokens():
