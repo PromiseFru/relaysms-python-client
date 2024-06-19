@@ -6,6 +6,7 @@ import base64
 import argparse
 
 from vault_client import create_an_entity, auth_an_entity, list_stored_tokens
+from publisher_client import get_oauth2_auth_url, exchange_oauth2_auth_code
 from utils import (
     Password,
     generate_keypair_and_pk,
@@ -21,6 +22,16 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("[Runner]")
+
+
+def get_llt():
+    """Retrieves and decrypts the Long-Lived Token."""
+    server_data = load_json("data.json")
+    server_pk = server_data["server_device_id_pub_key"]
+    llt_ciphertext = server_data["long_lived_token"]
+    did_keypair = load_keypair_object(load_binary("did_keypair.bin"))
+    did_shared_key = did_keypair.agree(base64.b64decode(server_pk))
+    return decrypt_llt(did_shared_key, base64.b64decode(llt_ciphertext))
 
 
 def create_entity(phone_number, country_code, password):
@@ -134,13 +145,7 @@ def list_tokens():
     """
     List an entity's stored tokens
     """
-    server_data = load_json("data.json")
-    server_pk = server_data["server_device_id_pub_key"]
-    llt_ciphertext = server_data["long_lived_token"]
-    did_keypair = load_keypair_object(load_binary("did_keypair.bin"))
-    did_shared_key = did_keypair.agree(base64.b64decode(server_pk))
-    llt = decrypt_llt(did_shared_key, base64.b64decode(llt_ciphertext))
-
+    llt = get_llt()
     token_res, token_err = list_stored_tokens(long_lived_token=llt)
 
     if token_err:
@@ -152,11 +157,45 @@ def list_tokens():
     sys.exit(0)
 
 
-def store_tokens():
+def store_tokens(platform, state, code_verifier, autogenerate_code_verifier):
     """
-    To be implemented.
+    Exchange OAuth2 Code and Store Access Token.
     """
-    pass
+    llt = get_llt()
+    url_res, url_err = get_oauth2_auth_url(
+        platform=platform,
+        state=state,
+        code_verifier=code_verifier,
+        autogenerate_code_verifier=autogenerate_code_verifier,
+    )
+
+    if url_err:
+        logger.error("%s - %s", url_err.code(), url_err.details())
+        sys.exit(1)
+
+    logger.info("%s", url_res.message)
+    logger.info("State: %s", url_res.state)
+    logger.info("Code Verifier: %s", url_res.code_verifier)
+    logger.info("Authorization URL: %s", url_res.authorization_url)
+
+    auth_code_res = input("Enter Authorization Code: ")
+    store_res, store_err = exchange_oauth2_auth_code(
+        long_lived_token=llt,
+        authorization_code=auth_code_res,
+        platform=platform,
+        code_verifier=code_verifier,
+    )
+
+    if store_err:
+        logger.error("%s - %s", store_err.code(), store_err.details())
+        sys.exit(1)
+
+    if not store_res:
+        logger.error("%s", store_res.message)
+        sys.exit(1)
+
+    logger.info("%s", store_res.message)
+    sys.exit(0)
 
 
 if __name__ == "__main__":
@@ -170,10 +209,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p", action=Password, nargs="?", dest="password", help="Enter your password"
     )
+    parser.add_argument("-r", "--country_code", help="The entity's country code")
+    parser.add_argument("--platform", help="The target platform")
     parser.add_argument(
-        "-r",
-        "--country_code",
-        help="The entity's country code",
+        "--state", help="The state parameter for preventing CSRF attacks"
+    )
+    parser.add_argument("--code_verifier", help="The code verifier used for PKCE")
+    parser.add_argument(
+        "--auto_cv",
+        help="Indicate if the code verifier should be auto-generated",
+        action="store_true",
     )
     args = parser.parse_args()
 
@@ -195,4 +240,8 @@ if __name__ == "__main__":
         list_tokens()
 
     elif args.command == "store-token":
-        store_tokens()
+        if not args.platform:
+            logger.error("Specify: --platform")
+            sys.exit(1)
+
+        store_tokens(args.platform, args.state, args.code_verifier, args.auto_cv)

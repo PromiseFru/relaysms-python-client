@@ -81,7 +81,7 @@ def create_an_entity(phone_number, **kwargs):
 
 @grpc_call
 def auth_an_entity(phone_number, **kwargs):
-    """Authenticate an existing entity"""
+    """Request to authenticate an existing entity"""
     stub = kwargs["stub"]
     password = kwargs.get("password")
     client_publish_pub_key = kwargs.get("client_publish_pub_key")
@@ -101,10 +101,9 @@ def auth_an_entity(phone_number, **kwargs):
 
 
 @grpc_call
-def list_stored_tokens(**kwargs):
-    """List an entity's stored tokens"""
+def list_stored_tokens(long_lived_token, **kwargs):
+    """Request to list an entity's stored tokens"""
     stub = kwargs["stub"]
-    long_lived_token = kwargs.get("long_lived_token")
 
     request = vault_pb2.ListEntityStoredTokenRequest(long_lived_token=long_lived_token)
 

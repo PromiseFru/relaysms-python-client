@@ -29,3 +29,5 @@ $(PROTO_DIR)/%.proto:
 vault-proto: PROTO_URL=https://raw.githubusercontent.com/smswithoutborders/SMSwithoutborders-BE/feature/grpc_api/protos/v1/vault.proto
 vault-proto: $(PROTO_DIR)/vault.proto
 
+publisher-proto: PROTO_URL=https://raw.githubusercontent.com/smswithoutborders/SMSWithoutBorders-Publisher/feature/grpc-api/protos/v1/publisher.proto
+publisher-proto: $(PROTO_DIR)/publisher.proto
