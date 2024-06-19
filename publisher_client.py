@@ -94,3 +94,13 @@ def exchange_oauth2_auth_code(long_lived_token, platform, authorization_code, **
 
     response = stub.ExchangeOAuth2CodeAndStore(request)
     return response, None
+
+
+@grpc_call
+def publish_content(content, **kwargs):
+    """"""
+    stub = kwargs["stub"]
+    request = publisher_pb2.PublishContentRequest(content=content)
+
+    response = stub.PublishContent(request)
+    return response, None

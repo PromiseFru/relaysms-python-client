@@ -6,7 +6,11 @@ import base64
 import argparse
 
 from vault_client import create_an_entity, auth_an_entity, list_stored_tokens
-from publisher_client import get_oauth2_auth_url, exchange_oauth2_auth_code
+from publisher_client import (
+    get_oauth2_auth_url,
+    exchange_oauth2_auth_code,
+    publish_content,
+)
 from utils import (
     Password,
     generate_keypair_and_pk,
@@ -16,6 +20,9 @@ from utils import (
     load_json,
     load_keypair_object,
     decrypt_llt,
+    compute_device_id,
+    encrypt_and_encode_payload,
+    encode_transmission_payload,
 )
 
 logging.basicConfig(
@@ -75,6 +82,7 @@ def create_entity(phone_number, country_code, password):
                 "server_publish_pub_key": fin_res.server_publish_pub_key,
                 "server_device_id_pub_key": fin_res.server_device_id_pub_key,
                 "long_lived_token": fin_res.long_lived_token,
+                "phone_number": phone_number,
             },
         )
 
@@ -127,6 +135,7 @@ def auth_entity(phone_number, password):
                 "server_publish_pub_key": fin_res.server_publish_pub_key,
                 "server_device_id_pub_key": fin_res.server_device_id_pub_key,
                 "long_lived_token": fin_res.long_lived_token,
+                "phone_number": phone_number,
             },
         )
 
@@ -190,7 +199,7 @@ def store_tokens(platform, state, code_verifier, autogenerate_code_verifier):
         logger.error("%s - %s", store_err.code(), store_err.details())
         sys.exit(1)
 
-    if not store_res:
+    if not store_res.success:
         logger.error("%s", store_res.message)
         sys.exit(1)
 
@@ -198,11 +207,55 @@ def store_tokens(platform, state, code_verifier, autogenerate_code_verifier):
     sys.exit(0)
 
 
+def publish_message(message, platform):
+    """"""
+    server_data = load_json("data.json")
+    phone_number = server_data["phone_number"]
+
+    server_did_pk = server_data["server_device_id_pub_key"]
+    did_keypair = load_keypair_object(load_binary("did_keypair.bin"))
+    did_shared_key = did_keypair.agree(base64.b64decode(server_did_pk))
+
+    server_pub_pk = server_data["server_publish_pub_key"]
+    pub_keypair = load_keypair_object(load_binary("pub_keypair.bin"))
+    pub_shared_key = pub_keypair.agree(base64.b64decode(server_pub_pk))
+
+    device_id = compute_device_id(
+        did_shared_key,
+        phone_number,
+        base64.b64encode(did_keypair.get_public_key()).decode("utf-8"),
+    )
+
+    payload, state = encrypt_and_encode_payload(
+        pub_shared_key,
+        base64.b64decode(server_pub_pk),
+        message,
+        client_publish_keystore_path="pub.db",
+    )
+
+    store_binary("client_state.bin", state)
+
+    trans_content = encode_transmission_payload(payload, platform, device_id)
+
+    pub_res, pub_err = publish_content(trans_content)
+
+    if pub_err:
+        logger.error("%s - %s", pub_err.code(), pub_err.details())
+        sys.exit(1)
+
+    if not pub_res.success:
+        logger.error("%s", pub_res.message)
+        sys.exit(1)
+
+    logger.info("%s", pub_res.message)
+    sys.exit(0)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Demo RelaySMS Client")
     parser.add_argument(
         "command",
-        choices=["create", "auth", "list-tokens", "store-token"],
+        choices=["create", "auth", "list-tokens", "store-token", "publish"],
         help="Command to execute",
     )
     parser.add_argument("-n", "--phone_number", help="The entity's phone number")
@@ -220,6 +273,8 @@ if __name__ == "__main__":
         help="Indicate if the code verifier should be auto-generated",
         action="store_true",
     )
+    parser.add_argument("-m", "--message", help="The message to publish")
+
     args = parser.parse_args()
 
     if args.command == "create":
@@ -245,3 +300,10 @@ if __name__ == "__main__":
             sys.exit(1)
 
         store_tokens(args.platform, args.state, args.code_verifier, args.auto_cv)
+
+    elif args.command == "publish":
+        if not args.message or not args.platform:
+            logger.error("Specify: --message, --platform")
+            sys.exit(1)
+
+        publish_message(args.message, args.platform)

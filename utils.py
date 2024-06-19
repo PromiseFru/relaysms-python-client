@@ -1,14 +1,20 @@
 """Utility module"""
 
 import os
+import struct
 import base64
 import logging
 import json
 import argparse
 import getpass
-
+import hmac
+import hashlib
 from cryptography.fernet import Fernet
+
 from smswithoutborders_libsig.keypairs import x25519
+from smswithoutborders_libsig.ratchets import Ratchets, States
+
+PLATFORM_INFO = {"gmail": {"shortcode": "g"}}
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -156,3 +162,54 @@ def decrypt_llt(secret_key, llt_ciphertext):
     key = base64.urlsafe_b64encode(secret_key)
     fernet = Fernet(key)
     return fernet.decrypt(llt_ciphertext).decode("utf-8")
+
+
+def compute_device_id(secret_key, phone_number, device_id_public_key):
+    """"""
+    combined_input = phone_number + device_id_public_key
+    hmac_object = hmac.new(secret_key, combined_input.encode("utf-8"), hashlib.sha256)
+    return hmac_object.digest()
+
+
+def encrypt_and_encode_payload(
+    publish_shared_key, peer_publish_pub_key, content, **kwargs
+):
+    """"""
+    state_file_path = "client_state.bin"
+    if not os.path.isfile(state_file_path):
+        state = States()
+    else:
+        state = States.deserialize(load_binary(state_file_path))
+
+    client_publish_keystore_path = kwargs.get("client_publish_keystore_path")
+
+    Ratchets.alice_init(
+        state, publish_shared_key, peer_publish_pub_key, client_publish_keystore_path
+    )
+    header, content_ciphertext = Ratchets.encrypt(
+        state, content.encode("utf-8"), peer_publish_pub_key
+    )
+
+    serialized_header = header.serialize()
+    len_header = len(serialized_header)
+    return (
+        base64.b64encode(
+            struct.pack("<i", len_header) + serialized_header + content_ciphertext
+        ).decode("utf-8"),
+        state.serialize(),
+    )
+
+
+def encode_transmission_payload(encrypted_content, platform, device_id):
+    """"""
+    platform_letter = PLATFORM_INFO[platform]["shortcode"].encode("utf-8")
+    content_ciphertext = base64.b64decode(encrypted_content)
+    payload = (
+        struct.pack("<i", len(content_ciphertext))
+        + platform_letter
+        + content_ciphertext
+        + device_id
+    )
+
+    encoded_payload = base64.b64encode(payload).decode("utf-8")
+    return encoded_payload
