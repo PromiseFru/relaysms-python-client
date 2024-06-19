@@ -1,4 +1,4 @@
-"""RelaySMs Demo Client"""
+"""RelaySMS Demo Client."""
 
 import sys
 import logging
@@ -32,7 +32,11 @@ logger = logging.getLogger("[Runner]")
 
 
 def get_llt():
-    """Retrieves and decrypts the Long-Lived Token."""
+    """Retrieve and decrypt the Long-Lived Token (LLT).
+
+    Returns:
+        str: Decrypted LLT.
+    """
     server_data = load_json("data.json")
     server_pk = server_data["server_device_id_pub_key"]
     llt_ciphertext = server_data["long_lived_token"]
@@ -42,8 +46,7 @@ def get_llt():
 
 
 def create_entity(phone_number, country_code, password):
-    """
-    Creates an entity.
+    """Create an entity.
 
     Args:
         phone_number (str): The phone number of the entity.
@@ -98,8 +101,7 @@ def create_entity(phone_number, country_code, password):
 
 
 def auth_entity(phone_number, password):
-    """
-    Authenticates an entity.
+    """Authenticate an entity.
 
     Args:
         phone_number (str): The phone number of the entity.
@@ -151,9 +153,7 @@ def auth_entity(phone_number, password):
 
 
 def list_tokens():
-    """
-    List an entity's stored tokens
-    """
+    """List an entity's stored tokens."""
     llt = get_llt()
     token_res, token_err = list_stored_tokens(long_lived_token=llt)
 
@@ -167,8 +167,13 @@ def list_tokens():
 
 
 def store_tokens(platform, state, code_verifier, autogenerate_code_verifier):
-    """
-    Exchange OAuth2 Code and Store Access Token.
+    """Exchange OAuth2 code and store access token.
+
+    Args:
+        platform (str): The target platform.
+        state (str): The state parameter for preventing CSRF attacks.
+        code_verifier (str): The code verifier used for PKCE.
+        autogenerate_code_verifier (bool): Whether to auto-generate the code verifier.
     """
     llt = get_llt()
     url_res, url_err = get_oauth2_auth_url(
@@ -208,7 +213,12 @@ def store_tokens(platform, state, code_verifier, autogenerate_code_verifier):
 
 
 def publish_message(message, platform):
-    """"""
+    """Publish a message to the specified platform.
+
+    Args:
+        message (str): The message to publish.
+        platform (str): The target platform.
+    """
     server_data = load_json("data.json")
     phone_number = server_data["phone_number"]
 

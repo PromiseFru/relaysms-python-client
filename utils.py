@@ -1,4 +1,4 @@
-"""Utility module"""
+"""Utility module."""
 
 import os
 import struct
@@ -66,7 +66,8 @@ def store_binary(file_path, data):
         with open(file_path, "wb") as fb:
             fb.write(data)
     except IOError as e:
-        print(f"Error writing to {file_path}: {e}")
+        logger.error("Error writing to %s: %s", file_path, e)
+        raise
 
 
 def load_binary(file_path):
@@ -83,8 +84,8 @@ def load_binary(file_path):
         with open(file_path, "rb") as fb:
             return fb.read()
     except IOError as e:
-        print(f"Error reading from {file_path}: {e}")
-        return b""
+        logger.error("Error reading from %s: %s", file_path, e)
+        raise
 
 
 def store_json(file_path, data):
@@ -99,7 +100,8 @@ def store_json(file_path, data):
         with open(file_path, "w", encoding="utf-8") as fj:
             json.dump(data, fj, indent=2)
     except IOError as e:
-        print(f"Error writing JSON to {file_path}: {e}")
+        logger.error("Error writing JSON to %s: %s", file_path, e)
+        raise
 
 
 def load_json(file_path):
@@ -116,8 +118,8 @@ def load_json(file_path):
         with open(file_path, "r", encoding="utf-8") as fj:
             return json.load(fj)
     except IOError as e:
-        print(f"Error reading JSON from {file_path}: {e}")
-        return {}
+        logger.error("Error reading JSON from %s: %s", file_path, e)
+        raise
 
 
 class Password(argparse.Action):
@@ -127,10 +129,7 @@ class Password(argparse.Action):
 
     def __call__(self, parser, namespace, values, option_string=None):
         """
-        Overrides the __call__ method of argparse.Action to handle password input.
-
-        If no password is provided via the command line, the user is prompted
-        to enter a password securely using getpass.
+        Overrides the __call__ method to handle password input securely.
 
         Args:
             parser (argparse.ArgumentParser): The argument parser object.
@@ -150,7 +149,7 @@ class Password(argparse.Action):
 
 def decrypt_llt(secret_key, llt_ciphertext):
     """
-    Decrypts the given LLT.
+    Decrypts the given LLT ciphertext.
 
     Args:
         secret_key (bytes): The secret key used for decryption.
@@ -165,7 +164,17 @@ def decrypt_llt(secret_key, llt_ciphertext):
 
 
 def compute_device_id(secret_key, phone_number, device_id_public_key):
-    """"""
+    """
+    Compute a device ID using HMAC-SHA256.
+
+    Args:
+        secret_key (bytes): The secret key for HMAC.
+        phone_number (str): The phone number.
+        device_id_public_key (str): The device ID public key.
+
+    Returns:
+        bytes: The computed device ID.
+    """
     combined_input = phone_number + device_id_public_key
     hmac_object = hmac.new(secret_key, combined_input.encode("utf-8"), hashlib.sha256)
     return hmac_object.digest()
@@ -174,7 +183,18 @@ def compute_device_id(secret_key, phone_number, device_id_public_key):
 def encrypt_and_encode_payload(
     publish_shared_key, peer_publish_pub_key, content, **kwargs
 ):
-    """"""
+    """
+    Encrypt and encode the payload for transmission.
+
+    Args:
+        publish_shared_key (bytes): Shared key for publishing.
+        peer_publish_pub_key (bytes): Public key of the peer.
+        content (str): Content to encrypt.
+        **kwargs: Additional keyword arguments.
+
+    Returns:
+        tuple: (encoded payload, serialized state)
+    """
     state_file_path = "client_state.bin"
     if not os.path.isfile(state_file_path):
         state = States()
@@ -201,7 +221,17 @@ def encrypt_and_encode_payload(
 
 
 def encode_transmission_payload(encrypted_content, platform, device_id):
-    """"""
+    """
+    Encode the payload for transmission.
+
+    Args:
+        encrypted_content (str): Encrypted content.
+        platform (str): Platform identifier.
+        device_id (bytes): Device ID.
+
+    Returns:
+        str: Base64 encoded transmission payload.
+    """
     platform_letter = PLATFORM_INFO[platform]["shortcode"].encode("utf-8")
     content_ciphertext = base64.b64decode(encrypted_content)
     payload = (
