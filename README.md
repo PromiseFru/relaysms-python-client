@@ -71,7 +71,7 @@ python relay_sms_client.py store-token --platform <platform> --state <state> --c
 
 **Arguments:**
 
-- `--platform`: The target platform (e.g., `google`, `facebook`).
+- `--platform`: The target platform (e.g., `gmail`, `twitter`).
 - `--state`: The state parameter for preventing CSRF attacks.
 - `--code_verifier`: The code verifier used for PKCE.
 - `--auto_cv`: Indicate if the code verifier should be auto-generated.
@@ -87,7 +87,7 @@ python relay_sms_client.py publish -m <message> --platform <platform>
 **Arguments:**
 
 - `-m`, `--message`: The message to publish.
-- `--platform`: The target platform (e.g., `twitter`, `gmail`).
+- `--platform`: The target platform (e.g., `gmail`, `twitter`).
 
 ## Contributing
 
