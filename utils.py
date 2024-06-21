@@ -196,22 +196,26 @@ def encrypt_and_encode_payload(
         tuple: (encoded payload, serialized state)
     """
     state_file_path = "client_state.bin"
+    client_publish_keystore_path = kwargs.get("client_publish_keystore_path")
+
     if not os.path.isfile(state_file_path):
         state = States()
+        Ratchets.alice_init(
+            state,
+            publish_shared_key,
+            peer_publish_pub_key,
+            client_publish_keystore_path,
+        )
     else:
         state = States.deserialize(load_binary(state_file_path))
 
-    client_publish_keystore_path = kwargs.get("client_publish_keystore_path")
-
-    Ratchets.alice_init(
-        state, publish_shared_key, peer_publish_pub_key, client_publish_keystore_path
-    )
     header, content_ciphertext = Ratchets.encrypt(
         state, content.encode("utf-8"), peer_publish_pub_key
     )
 
     serialized_header = header.serialize()
     len_header = len(serialized_header)
+
     return (
         base64.b64encode(
             struct.pack("<i", len_header) + serialized_header + content_ciphertext

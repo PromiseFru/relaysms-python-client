@@ -1,5 +1,6 @@
 """RelaySMS Demo Client."""
 
+import os
 import sys
 import logging
 import base64
@@ -53,9 +54,6 @@ def create_entity(phone_number, country_code, password):
         country_code (str): The country code of the entity's phone number.
         password (str): The password for authentication.
     """
-    pub_pk, pub_keypair = generate_keypair_and_pk("pub.db")
-    did_pk, did_keypair = generate_keypair_and_pk("did.db")
-
     init_res, init_err = create_an_entity(phone_number)
 
     if init_err:
@@ -65,6 +63,8 @@ def create_entity(phone_number, country_code, password):
     if init_res.requires_ownership_proof:
         logger.info("%s", init_res.message)
         pow_res = input("Enter Proof Response: ")
+        pub_pk, pub_keypair = generate_keypair_and_pk("pub.db")
+        did_pk, did_keypair = generate_keypair_and_pk("did.db")
         fin_res, fin_err = create_an_entity(
             phone_number=phone_number,
             country_code=country_code,
@@ -107,9 +107,6 @@ def auth_entity(phone_number, password):
         phone_number (str): The phone number of the entity.
         password (str): The password for authentication.
     """
-    pub_pk, pub_keypair = generate_keypair_and_pk("pub.db")
-    did_pk, did_keypair = generate_keypair_and_pk("did.db")
-
     init_res, init_err = auth_an_entity(phone_number=phone_number, password=password)
 
     if init_err:
@@ -119,6 +116,8 @@ def auth_entity(phone_number, password):
     if init_res.requires_ownership_proof:
         logger.info("%s", init_res.message)
         pow_res = input("Enter Proof Response: ")
+        pub_pk, pub_keypair = generate_keypair_and_pk("pub.db")
+        did_pk, did_keypair = generate_keypair_and_pk("did.db")
         fin_res, fin_err = auth_an_entity(
             phone_number=phone_number,
             client_publish_pub_key=base64.b64encode(pub_pk).decode(),
@@ -144,6 +143,10 @@ def auth_entity(phone_number, password):
         logger.info("Storing keypairs")
         store_binary("pub_keypair.bin", pub_keypair.serialize())
         store_binary("did_keypair.bin", did_keypair.serialize())
+        if os.path.isfile("client_state.bin"):
+            os.remove("client_state.bin")
+        if os.path.isfile("client.db"):
+            os.remove("client.db")
 
         logger.info("%s", fin_res.message)
         sys.exit(0)
@@ -240,7 +243,7 @@ def publish_message(message, platform):
         pub_shared_key,
         base64.b64decode(server_pub_pk),
         message,
-        client_publish_keystore_path="pub.db",
+        client_publish_keystore_path="client.db",
     )
 
     store_binary("client_state.bin", state)
