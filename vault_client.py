@@ -109,3 +109,14 @@ def list_stored_tokens(long_lived_token, **kwargs):
 
     response = stub.ListEntityStoredTokens(request)
     return response, None
+
+
+@grpc_call
+def delete_an_entity(long_lived_token, **kwargs):
+    """Request to delete an entity"""
+    stub = kwargs["stub"]
+
+    request = vault_pb2.DeleteEntityRequest(long_lived_token=long_lived_token)
+
+    response = stub.DeleteEntity(request)
+    return response, None

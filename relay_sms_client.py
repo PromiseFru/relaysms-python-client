@@ -6,7 +6,12 @@ import logging
 import base64
 import argparse
 
-from vault_client import create_an_entity, auth_an_entity, list_stored_tokens
+from vault_client import (
+    create_an_entity,
+    auth_an_entity,
+    list_stored_tokens,
+    delete_an_entity,
+)
 from publisher_client import (
     get_oauth2_auth_url,
     exchange_oauth2_auth_code,
@@ -298,6 +303,32 @@ def revoke_tokens(platform, account):
     sys.exit(0)
 
 
+def delete_entity():
+    """Delete an entity"""
+    confirmation = (
+        input("Are you sure you want to delete the entity? (yes/no) [no]: ")
+        .strip()
+        .lower()
+    )
+    if confirmation not in ("yes", "y"):
+        print("Deletion aborted.")
+        sys.exit(0)
+
+    llt = get_llt()
+    delete_res, delete_err = delete_an_entity(long_lived_token=llt)
+
+    if delete_err:
+        logger.error("%s - %s", delete_err.code(), delete_err.details())
+        sys.exit(1)
+
+    if not delete_res.success:
+        logger.error("%s", delete_res.message)
+        sys.exit(1)
+
+    logger.info("%s", delete_res.message)
+    sys.exit(0)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Demo RelaySMS Client")
     parser.add_argument(
@@ -310,6 +341,7 @@ if __name__ == "__main__":
             "publish",
             "show-llt",
             "revoke-token",
+            "delete",
         ],
         help="Command to execute",
     )
@@ -375,3 +407,6 @@ if __name__ == "__main__":
             sys.exit(1)
 
         revoke_tokens(args.platform, args.account)
+
+    elif args.command == "delete":
+        delete_entity()

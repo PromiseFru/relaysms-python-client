@@ -12,6 +12,8 @@ The RelaySMS Demo Client is a command-line tool designed for managing entities.
   - [List Tokens](#list-tokens)
   - [Store Token](#store-token)
   - [Publish Message](#publish-message)
+  - [Revoke Token](#revoke-token)
+  - [Delete Entity](#delete-entity)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -91,7 +93,7 @@ python relay_sms_client.py publish -m <message> --platform <platform>
 
 ### Revoke Token
 
-Revoke and delete stored tokens
+Revokes and delete stored tokens
 
 ```bash
 python3 relay_sms_client.py revoke-token --platform <platform> -a <account identifier>
@@ -101,6 +103,14 @@ python3 relay_sms_client.py revoke-token --platform <platform> -a <account ident
 
 - `-a`, `--account`: The account identifier associated with the token.
 - `--platform`: The target platform (e.g., `gmail`, `twitter`).
+
+### Delete Entity
+
+Deletes an entity.
+
+```bash
+python relay_sms_client.py delete
+```
 
 ## Contributing
 
