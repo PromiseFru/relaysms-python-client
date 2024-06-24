@@ -89,6 +89,19 @@ python relay_sms_client.py publish -m <message> --platform <platform>
 - `-m`, `--message`: The message to publish.
 - `--platform`: The target platform (e.g., `gmail`, `twitter`).
 
+### Revoke Token
+
+Revoke and delete stored tokens
+
+```bash
+python3 relay_sms_client.py revoke-token --platform <platform> -a <account identifier>
+```
+
+**Arguments:**
+
+- `-a`, `--account`: The account identifier associated with the token.
+- `--platform`: The target platform (e.g., `gmail`, `twitter`).
+
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request for any

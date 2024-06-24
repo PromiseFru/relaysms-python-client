@@ -98,9 +98,23 @@ def exchange_oauth2_auth_code(long_lived_token, platform, authorization_code, **
 
 @grpc_call
 def publish_content(content, **kwargs):
-    """"""
+    """Request for publishing message to a target platform"""
     stub = kwargs["stub"]
     request = publisher_pb2.PublishContentRequest(content=content)
 
     response = stub.PublishContent(request)
+    return response, None
+
+
+@grpc_call
+def revoke_access_token(long_lived_token, platform, account, **kwargs):
+    """Request for revoking and deleting an entity's access token in the vault"""
+    stub = kwargs["stub"]
+    request = publisher_pb2.RevokeAndDeleteOAuth2TokenRequest(
+        long_lived_token=long_lived_token,
+        platform=platform,
+        account_identifier=account,
+    )
+
+    response = stub.RevokeAndDeleteOAuth2Token(request)
     return response, None

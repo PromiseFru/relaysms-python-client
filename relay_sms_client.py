@@ -11,6 +11,7 @@ from publisher_client import (
     get_oauth2_auth_url,
     exchange_oauth2_auth_code,
     publish_content,
+    revoke_access_token,
 )
 from utils import (
     Password,
@@ -264,11 +265,52 @@ def publish_message(message, platform):
     sys.exit(0)
 
 
+def show_llt():
+    """Display the entity's long-lived token"""
+    llt = get_llt()
+    logger.info("Long-Lived Token: %s", llt)
+    return True
+
+
+def revoke_tokens(platform, account):
+    """Revokes and deletes and entity's access token
+
+    Args:
+        platform (str): The target platform
+        account (str): The account identifier associated with the token
+    """
+    llt = get_llt()
+    revoke_res, revoke_err = revoke_access_token(
+        long_lived_token=llt,
+        platform=platform,
+        account=account,
+    )
+
+    if revoke_err:
+        logger.error("%s - %s", revoke_err.code(), revoke_err.details())
+        sys.exit(1)
+
+    if not revoke_res.success:
+        logger.error("%s", revoke_res.message)
+        sys.exit(1)
+
+    logger.info("%s", revoke_res.message)
+    sys.exit(0)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Demo RelaySMS Client")
     parser.add_argument(
         "command",
-        choices=["create", "auth", "list-tokens", "store-token", "publish"],
+        choices=[
+            "create",
+            "auth",
+            "list-tokens",
+            "store-token",
+            "publish",
+            "show-llt",
+            "revoke-token",
+        ],
         help="Command to execute",
     )
     parser.add_argument("-n", "--phone_number", help="The entity's phone number")
@@ -287,6 +329,9 @@ if __name__ == "__main__":
         action="store_true",
     )
     parser.add_argument("-m", "--message", help="The message to publish")
+    parser.add_argument(
+        "-a", "--account", help="The account identifier of the platform"
+    )
 
     args = parser.parse_args()
 
@@ -320,3 +365,13 @@ if __name__ == "__main__":
             sys.exit(1)
 
         publish_message(args.message, args.platform)
+
+    elif args.command == "show-llt":
+        show_llt()
+
+    elif args.command == "revoke-token":
+        if not args.platform or not args.account:
+            logger.error("Specify: --platform, --account")
+            sys.exit(1)
+
+        revoke_tokens(args.platform, args.account)
