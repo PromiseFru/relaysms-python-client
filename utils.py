@@ -12,7 +12,7 @@ import hashlib
 from cryptography.fernet import Fernet
 
 from smswithoutborders_libsig.keypairs import x25519
-from smswithoutborders_libsig.ratchets import Ratchets, States
+from smswithoutborders_libsig.ratchets import Ratchets, States, HEADERS
 
 PLATFORM_INFO = {"gmail": {"shortcode": "g"}}
 
@@ -222,6 +222,33 @@ def encrypt_and_encode_payload(
         ).decode("utf-8"),
         state.serialize(),
     )
+
+
+def decode_and_decrypt_payload(content, publish_pub_key):
+    """
+    Decodes and decrypts the incoming payload.
+
+    Args:
+        content (str): The content to decrypt.
+        publish_pub_key (bytes): The client's publish public key.
+
+    Returns:
+        str: The decoded payload
+    """
+    state_file_path = "client_state.bin"
+    state = States.deserialize(load_binary(state_file_path))
+
+    payload = base64.b64decode(content)
+    len_header = struct.unpack("<i", payload[:4])[0]
+
+    header = payload[4 : 4 + len_header]
+    deserialized_header = HEADERS.deserialize(header)
+
+    encrypted_content = payload[4 + len_header :]
+    plaintext = Ratchets.decrypt(
+        state, deserialized_header, encrypted_content, publish_pub_key
+    )
+    return plaintext.decode("utf-8")
 
 
 def encode_transmission_payload(encrypted_content, platform, device_id):

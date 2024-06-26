@@ -30,6 +30,7 @@ from utils import (
     compute_device_id,
     encrypt_and_encode_payload,
     encode_transmission_payload,
+    decode_and_decrypt_payload,
 )
 
 logging.basicConfig(
@@ -266,7 +267,12 @@ def publish_message(message, platform):
         logger.error("%s", pub_res.message)
         sys.exit(1)
 
+    decoded_publisher_response = decode_and_decrypt_payload(
+        pub_res.publisher_response, pub_keypair.get_public_key()
+    )
+
     logger.info("%s", pub_res.message)
+    logger.info("Publisher Says: %s", decoded_publisher_response)
     sys.exit(0)
 
 
