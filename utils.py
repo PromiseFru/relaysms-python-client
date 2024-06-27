@@ -14,7 +14,7 @@ from cryptography.fernet import Fernet
 from smswithoutborders_libsig.keypairs import x25519
 from smswithoutborders_libsig.ratchets import Ratchets, States, HEADERS
 
-PLATFORM_INFO = {"gmail": {"shortcode": "g"}}
+PLATFORM_INFO = {"gmail": {"shortcode": "g"}, "twitter": {"shortcode": "t"}}
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"

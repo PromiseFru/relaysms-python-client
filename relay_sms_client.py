@@ -202,12 +202,13 @@ def store_tokens(platform, state, code_verifier, autogenerate_code_verifier):
     logger.info("Code Verifier: %s", url_res.code_verifier)
     logger.info("Authorization URL: %s", url_res.authorization_url)
 
+    cv = url_res.code_verifier
     auth_code_res = input("Enter Authorization Code: ")
     store_res, store_err = exchange_oauth2_auth_code(
         long_lived_token=llt,
         authorization_code=auth_code_res,
         platform=platform,
-        code_verifier=code_verifier,
+        code_verifier=cv,
     )
 
     if store_err:
@@ -222,7 +223,7 @@ def store_tokens(platform, state, code_verifier, autogenerate_code_verifier):
     sys.exit(0)
 
 
-def publish_message(message, platform):
+def publish_message(message, platform, dry_run=False):
     """Publish a message to the specified platform.
 
     Args:
@@ -256,6 +257,16 @@ def publish_message(message, platform):
     store_binary("client_state.bin", state)
 
     trans_content = encode_transmission_payload(payload, platform, device_id)
+
+    if dry_run:
+        logger.info("Transmission Content: %s", trans_content)
+        publisher_response = input("Enter Publisher's response: ")
+        decoded_publisher_response = decode_and_decrypt_payload(
+            publisher_response, pub_keypair.get_public_key()
+        )
+
+        logger.info("Publisher Says: %s", decoded_publisher_response)
+        sys.exit(0)
 
     pub_res, pub_err = publish_content(trans_content)
 
@@ -370,6 +381,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "-a", "--account", help="The account identifier of the platform"
     )
+    parser.add_argument(
+        "-d",
+        "--dry_run",
+        help="If set to True, content will be displayed in the console "
+        "instead of being published.",
+        action="store_true",
+    )
 
     args = parser.parse_args()
 
@@ -402,7 +420,7 @@ if __name__ == "__main__":
             logger.error("Specify: --message, --platform")
             sys.exit(1)
 
-        publish_message(args.message, args.platform)
+        publish_message(args.message, args.platform, args.dry_run)
 
     elif args.command == "show-llt":
         show_llt()
