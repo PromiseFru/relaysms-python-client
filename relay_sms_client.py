@@ -61,7 +61,15 @@ def create_entity(phone_number, country_code, password):
         country_code (str): The country code of the entity's phone number.
         password (str): The password for authentication.
     """
-    init_res, init_err = create_an_entity(phone_number)
+    pub_pk, pub_keypair = generate_keypair_and_pk("pub.db")
+    did_pk, did_keypair = generate_keypair_and_pk("did.db")
+    init_res, init_err = create_an_entity(
+        phone_number=phone_number,
+        country_code=country_code,
+        password=password,
+        client_publish_pub_key=base64.b64encode(pub_pk).decode(),
+        client_device_id_pub_key=base64.b64encode(did_pk).decode(),
+    )
 
     if init_err:
         logger.error("%s - %s", init_err.code(), init_err.details())
@@ -70,8 +78,6 @@ def create_entity(phone_number, country_code, password):
     if init_res.requires_ownership_proof:
         logger.info("%s", init_res.message)
         pow_res = input("Enter Proof Response: ")
-        pub_pk, pub_keypair = generate_keypair_and_pk("pub.db")
-        did_pk, did_keypair = generate_keypair_and_pk("did.db")
         fin_res, fin_err = create_an_entity(
             phone_number=phone_number,
             country_code=country_code,
@@ -114,7 +120,14 @@ def auth_entity(phone_number, password):
         phone_number (str): The phone number of the entity.
         password (str): The password for authentication.
     """
-    init_res, init_err = auth_an_entity(phone_number=phone_number, password=password)
+    pub_pk, pub_keypair = generate_keypair_and_pk("pub.db")
+    did_pk, did_keypair = generate_keypair_and_pk("did.db")
+    init_res, init_err = auth_an_entity(
+        phone_number=phone_number,
+        password=password,
+        client_publish_pub_key=base64.b64encode(pub_pk).decode(),
+        client_device_id_pub_key=base64.b64encode(did_pk).decode(),
+    )
 
     if init_err:
         logger.error("%s - %s", init_err.code(), init_err.details())
@@ -123,10 +136,9 @@ def auth_entity(phone_number, password):
     if init_res.requires_ownership_proof:
         logger.info("%s", init_res.message)
         pow_res = input("Enter Proof Response: ")
-        pub_pk, pub_keypair = generate_keypair_and_pk("pub.db")
-        did_pk, did_keypair = generate_keypair_and_pk("did.db")
         fin_res, fin_err = auth_an_entity(
             phone_number=phone_number,
+            password=password,
             client_publish_pub_key=base64.b64encode(pub_pk).decode(),
             client_device_id_pub_key=base64.b64encode(did_pk).decode(),
             ownership_proof_response=pow_res,
