@@ -212,6 +212,9 @@ def store_tokens(platform, state, code_verifier, autogenerate_code_verifier):
     logger.info("%s", url_res.message)
     logger.info("State: %s", url_res.state)
     logger.info("Code Verifier: %s", url_res.code_verifier)
+    logger.info("Client ID: %s", url_res.client_id)
+    logger.info("Scope: %s", url_res.scope)
+    logger.info("Redirect URL: %s", url_res.redirect_url)
     logger.info("Authorization URL: %s", url_res.authorization_url)
 
     cv = url_res.code_verifier
