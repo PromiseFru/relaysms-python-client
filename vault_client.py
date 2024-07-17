@@ -25,10 +25,16 @@ def get_channel():
     hostname = os.environ.get("VAULT_HOST")
     port = os.environ.get("VAULT_PORT")
     secure_port = os.environ.get("VAULT_TLS_PORT")
+    root_certificates_path = os.environ.get("ROOT_CERTIFICATE_PATH")
 
     if secure_mode:
+        root_certificates = None
+        if root_certificates_path:
+            with open(root_certificates_path, "rb") as f:
+                root_certificates = f.read()
+
         logger.info("Connecting to vault gRPC server at %s:%s", hostname, secure_port)
-        credentials = grpc.ssl_channel_credentials()
+        credentials = grpc.ssl_channel_credentials(root_certificates=root_certificates)
         logger.info("Using secure channel for gRPC communication")
         return grpc.secure_channel(f"{hostname}:{secure_port}", credentials)
 
@@ -105,7 +111,7 @@ def list_stored_tokens(long_lived_token, **kwargs):
     """Request to list an entity's stored tokens"""
     stub = kwargs["stub"]
 
-    request = vault_pb2.ListEntityStoredTokenRequest(long_lived_token=long_lived_token)
+    request = vault_pb2.ListEntityStoredTokensRequest(long_lived_token=long_lived_token)
 
     response = stub.ListEntityStoredTokens(request)
     return response, None
@@ -119,4 +125,25 @@ def delete_an_entity(long_lived_token, **kwargs):
     request = vault_pb2.DeleteEntityRequest(long_lived_token=long_lived_token)
 
     response = stub.DeleteEntity(request)
+    return response, None
+
+
+@grpc_call
+def reset_password(phone_number, **kwargs):
+    """Request to reset and entity's password"""
+    stub = kwargs["stub"]
+    new_password = kwargs.get("new_password")
+    client_publish_pub_key = kwargs.get("client_publish_pub_key")
+    client_device_id_pub_key = kwargs.get("client_device_id_pub_key")
+    ownership_proof_response = kwargs.get("ownership_proof_response")
+
+    request = vault_pb2.ResetPasswordRequest(
+        phone_number=phone_number,
+        new_password=new_password,
+        client_publish_pub_key=client_publish_pub_key,
+        client_device_id_pub_key=client_device_id_pub_key,
+        ownership_proof_response=ownership_proof_response,
+    )
+
+    response = stub.ResetPassword(request)
     return response, None

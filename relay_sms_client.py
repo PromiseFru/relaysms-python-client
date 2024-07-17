@@ -188,7 +188,9 @@ def list_tokens():
     sys.exit(0)
 
 
-def store_tokens(platform, state, code_verifier, autogenerate_code_verifier):
+def store_tokens(
+    platform, state, code_verifier, autogenerate_code_verifier, redirect_url
+):
     """Exchange OAuth2 code and store access token.
 
     Args:
@@ -196,6 +198,7 @@ def store_tokens(platform, state, code_verifier, autogenerate_code_verifier):
         state (str): The state parameter for preventing CSRF attacks.
         code_verifier (str): The code verifier used for PKCE.
         autogenerate_code_verifier (bool): Whether to auto-generate the code verifier.
+        redirect_url (str):
     """
     llt = get_llt()
     url_res, url_err = get_oauth2_auth_url(
@@ -203,6 +206,7 @@ def store_tokens(platform, state, code_verifier, autogenerate_code_verifier):
         state=state,
         code_verifier=code_verifier,
         autogenerate_code_verifier=autogenerate_code_verifier,
+        redirect_url=redirect_url,
     )
 
     if url_err:
@@ -224,6 +228,7 @@ def store_tokens(platform, state, code_verifier, autogenerate_code_verifier):
         authorization_code=auth_code_res,
         platform=platform,
         code_verifier=cv,
+        redirect_url=redirect_url,
     )
 
     if store_err:
@@ -403,6 +408,7 @@ if __name__ == "__main__":
         "instead of being published.",
         action="store_true",
     )
+    parser.add_argument("-u", "--redirect_url", help="")
 
     args = parser.parse_args()
 
@@ -428,7 +434,13 @@ if __name__ == "__main__":
             logger.error("Specify: --platform")
             sys.exit(1)
 
-        store_tokens(args.platform, args.state, args.code_verifier, args.auto_cv)
+        store_tokens(
+            args.platform,
+            args.state,
+            args.code_verifier,
+            args.auto_cv,
+            args.redirect_url,
+        )
 
     elif args.command == "publish":
         if not args.message or not args.platform:

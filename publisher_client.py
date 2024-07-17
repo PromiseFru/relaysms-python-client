@@ -65,12 +65,14 @@ def get_oauth2_auth_url(platform, **kwargs):
     state = kwargs.get("state")
     code_verifier = kwargs.get("code_verifier")
     autogenerate_code_verifier = kwargs.get("autogenerate_code_verifier")
+    redirect_url = kwargs.get("redirect_url")
 
     request = publisher_pb2.GetOAuth2AuthorizationUrlRequest(
         platform=platform,
         state=state,
         code_verifier=code_verifier,
         autogenerate_code_verifier=autogenerate_code_verifier,
+        redirect_url=redirect_url,
     )
 
     response = stub.GetOAuth2AuthorizationUrl(request)
@@ -84,12 +86,14 @@ def exchange_oauth2_auth_code(long_lived_token, platform, authorization_code, **
     """
     stub = kwargs["stub"]
     code_verifier = kwargs.get("code_verifier")
+    redirect_url = kwargs.get("redirect_url")
 
     request = publisher_pb2.ExchangeOAuth2CodeAndStoreRequest(
         long_lived_token=long_lived_token,
         platform=platform,
         authorization_code=authorization_code,
         code_verifier=code_verifier,
+        redirect_url=redirect_url,
     )
 
     response = stub.ExchangeOAuth2CodeAndStore(request)
