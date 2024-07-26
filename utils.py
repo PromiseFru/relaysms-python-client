@@ -263,8 +263,15 @@ def encode_transmission_payload(encrypted_content, platform, device_id):
     Returns:
         str: Base64 encoded transmission payload.
     """
-    platform_letter = PLATFORM_INFO[platform]["shortcode"].encode("utf-8")
+    platform_info = load_json("platforms.json")
+    platform_details = next((p for p in platform_info if p["name"] == platform), None)
+
+    if not platform_details:
+        raise ValueError(f"Platform '{platform}' not found.")
+
+    platform_letter = platform_details["shortcode"].encode("utf-8")
     content_ciphertext = base64.b64decode(encrypted_content)
+
     payload = (
         struct.pack("<i", len(content_ciphertext))
         + platform_letter
@@ -272,5 +279,4 @@ def encode_transmission_payload(encrypted_content, platform, device_id):
         + device_id
     )
 
-    encoded_payload = base64.b64encode(payload).decode("utf-8")
-    return encoded_payload
+    return base64.b64encode(payload).decode("utf-8")

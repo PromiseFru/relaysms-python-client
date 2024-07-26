@@ -17,6 +17,8 @@ from publisher_client import (
     exchange_oauth2_auth_code,
     publish_content,
     revoke_access_token,
+    get_pnba_code,
+    exchange_pnba_auth_code,
 )
 from utils import (
     Password,
@@ -188,59 +190,121 @@ def list_tokens():
     sys.exit(0)
 
 
-def store_tokens(
-    platform, state, code_verifier, autogenerate_code_verifier, redirect_url
-):
-    """Exchange OAuth2 code and store access token.
+def store_tokens(platform, **kwargs):
+    """Exchange code and store access token.
 
     Args:
         platform (str): The target platform.
-        state (str): The state parameter for preventing CSRF attacks.
-        code_verifier (str): The code verifier used for PKCE.
-        autogenerate_code_verifier (bool): Whether to auto-generate the code verifier.
-        redirect_url (str):
     """
+    state = kwargs["state"]
+    code_verifier = kwargs["code_verifier"]
+    autogenerate_code_verifier = kwargs["autogenerate_code_verifier"]
+    redirect_url = kwargs["redirect_url"]
+    phone_number = kwargs["phone_number"]
+
     llt = get_llt()
-    url_res, url_err = get_oauth2_auth_url(
-        platform=platform,
-        state=state,
-        code_verifier=code_verifier,
-        autogenerate_code_verifier=autogenerate_code_verifier,
-        redirect_url=redirect_url,
-    )
+    platform_info = load_json("platforms.json")
+    platform_details = next((p for p in platform_info if p["name"] == platform), None)
 
-    if url_err:
-        logger.error("%s - %s", url_err.code(), url_err.details())
-        sys.exit(1)
+    if not platform_details:
+        raise ValueError(f"Platform '{platform}' not found.")
 
-    logger.info("%s", url_res.message)
-    logger.info("State: %s", url_res.state)
-    logger.info("Code Verifier: %s", url_res.code_verifier)
-    logger.info("Client ID: %s", url_res.client_id)
-    logger.info("Scope: %s", url_res.scope)
-    logger.info("Redirect URL: %s", url_res.redirect_url)
-    logger.info("Authorization URL: %s", url_res.authorization_url)
+    def handle_oauth2():
+        url_res, url_err = get_oauth2_auth_url(
+            platform=platform,
+            state=state,
+            code_verifier=code_verifier,
+            autogenerate_code_verifier=autogenerate_code_verifier,
+            redirect_url=redirect_url,
+        )
 
-    cv = url_res.code_verifier
-    auth_code_res = input("Enter Authorization Code: ")
-    store_res, store_err = exchange_oauth2_auth_code(
-        long_lived_token=llt,
-        authorization_code=auth_code_res,
-        platform=platform,
-        code_verifier=cv,
-        redirect_url=redirect_url,
-    )
+        if url_err:
+            logger.error("%s - %s", url_err.code(), url_err.details())
+            sys.exit(1)
 
-    if store_err:
-        logger.error("%s - %s", store_err.code(), store_err.details())
-        sys.exit(1)
+        logger.info("%s", url_res.message)
+        logger.info("State: %s", url_res.state)
+        logger.info("Code Verifier: %s", url_res.code_verifier)
+        logger.info("Client ID: %s", url_res.client_id)
+        logger.info("Scope: %s", url_res.scope)
+        logger.info("Redirect URL: %s", url_res.redirect_url)
+        logger.info("Authorization URL: %s", url_res.authorization_url)
 
-    if not store_res.success:
-        logger.error("%s", store_res.message)
-        sys.exit(1)
+        cv = url_res.code_verifier
+        auth_code_res = input("Enter Authorization Code: ")
+        store_res, store_err = exchange_oauth2_auth_code(
+            long_lived_token=llt,
+            authorization_code=auth_code_res,
+            platform=platform,
+            code_verifier=cv,
+            redirect_url=redirect_url,
+        )
 
-    logger.info("%s", store_res.message)
-    sys.exit(0)
+        if store_err:
+            logger.error("%s - %s", store_err.code(), store_err.details())
+            sys.exit(1)
+
+        if not store_res.success:
+            logger.error("%s", store_res.message)
+            sys.exit(1)
+
+        logger.info("%s", store_res.message)
+        sys.exit(0)
+
+    def handle_pnba():
+        code_res, code_err = get_pnba_code(platform=platform, phone_number=phone_number)
+
+        if code_err:
+            logger.error("%s - %s", code_err.code(), code_err.details())
+            sys.exit(1)
+
+        logger.info("%s", code_res.message)
+
+        auth_code_res = input("Enter Authorization Code: ")
+        store_res, store_err = exchange_pnba_auth_code(
+            long_lived_token=llt,
+            authorization_code=auth_code_res,
+            platform=platform,
+            phone_number=phone_number,
+        )
+
+        if store_err:
+            logger.error("%s - %s", store_err.code(), store_err.details())
+            if "password" in store_err.details():
+                password_res = input("Enter Password: ")
+                p_store_res, p_store_err = exchange_pnba_auth_code(
+                    long_lived_token=llt,
+                    authorization_code=auth_code_res,
+                    platform=platform,
+                    phone_number=phone_number,
+                    password=password_res,
+                )
+
+                if p_store_err:
+                    logger.error("%s - %s", p_store_err.code(), p_store_err.details())
+                    sys.exit(1)
+
+                if not p_store_res.success:
+                    logger.error("%s", p_store_res.message)
+                    sys.exit(1)
+
+                logger.info("%s", p_store_res.message)
+                sys.exit(0)
+
+            logger.error("%s - %s", store_err.code(), store_err.details())
+            sys.exit(1)
+
+        if not store_res.success:
+            logger.error("%s", store_res.message)
+            sys.exit(1)
+
+        logger.info("%s", store_res.message)
+        sys.exit(0)
+
+    if platform_details["protocol_type"] == "oauth2":
+        handle_oauth2()
+    elif platform_details["protocol_type"] == "pnba":
+        handle_pnba()
 
 
 def publish_message(message, platform, dry_run=False):
@@ -435,11 +499,12 @@ if __name__ == "__main__":
             sys.exit(1)
 
         store_tokens(
-            args.platform,
-            args.state,
-            args.code_verifier,
-            args.auto_cv,
-            args.redirect_url,
+            platform=args.platform,
+            state=args.state,
+            code_verifier=args.code_verifier,
+            autogenerate_code_verifier=args.auto_cv,
+            redirect_url=args.redirect_url,
+            phone_number=args.phone_number,
         )
 
     elif args.command == "publish":

@@ -122,3 +122,37 @@ def revoke_access_token(long_lived_token, platform, account, **kwargs):
 
     response = stub.RevokeAndDeleteOAuth2Token(request)
     return response, None
+
+
+@grpc_call
+def get_pnba_code(platform, phone_number, **kwargs):
+    """Request a PNBA code"""
+    stub = kwargs["stub"]
+
+    request = publisher_pb2.GetPNBACodeRequest(
+        platform=platform,
+        phone_number=phone_number,
+    )
+
+    response = stub.GetPNBACode(request)
+    return response, None
+
+
+@grpc_call
+def exchange_pnba_auth_code(
+    long_lived_token, platform, authorization_code, phone_number, **kwargs
+):
+    """Request to exchange PNBA code for a token and store in the vault"""
+    stub = kwargs["stub"]
+    password = kwargs.get("password")
+
+    request = publisher_pb2.ExchangePNBACodeAndStoreRequest(
+        long_lived_token=long_lived_token,
+        platform=platform,
+        authorization_code=authorization_code,
+        phone_number=phone_number,
+        password=password,
+    )
+
+    response = stub.ExchangePNBACodeAndStore(request)
+    return response, None

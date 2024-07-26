@@ -1,5 +1,6 @@
 python=python3
 PROTO_DIR=protos/v1
+SUPPORTED_PLATFORMS_URL="https://raw.githubusercontent.com/smswithoutborders/SMSWithoutBorders-Publisher/feature/grpc-api/resources/platforms.json"
 
 define log_message
 	@echo "[$(shell date +'%Y-%m-%d %H:%M:%S')] - $1"
@@ -26,8 +27,20 @@ $(PROTO_DIR)/%.proto:
 	$(eval PROTO_URL := $(PROTO_URL))
 	$(call download-proto)
 
-vault-proto: PROTO_URL=https://raw.githubusercontent.com/smswithoutborders/SMSwithoutborders-BE/feature/grpc_api/protos/v1/vault.proto
-vault-proto: $(PROTO_DIR)/vault.proto
+vault-proto: 
+	@rm -f "$(PROTO_DIR)/vault.proto"
+	@$(MAKE) PROTO_URL=https://raw.githubusercontent.com/smswithoutborders/SMSwithoutborders-BE/feature/grpc_api/protos/v1/vault.proto \
+	$(PROTO_DIR)/vault.proto
 
-publisher-proto: PROTO_URL=https://raw.githubusercontent.com/smswithoutborders/SMSWithoutBorders-Publisher/feature/grpc-api/protos/v1/publisher.proto
-publisher-proto: $(PROTO_DIR)/publisher.proto
+publisher-proto: 
+	@rm -f "$(PROTO_DIR)/publisher.proto"
+	@$(MAKE) PROTO_URL=https://raw.githubusercontent.com/smswithoutborders/SMSwithoutborders-Publisher/feature/grpc-api/protos/v1/publisher.proto \
+	$(PROTO_DIR)/publisher.proto
+
+download-platforms:
+	$(call log_message,INFO - Starting download of platforms JSON file ...)
+	@curl -o platforms.json -L "${SUPPORTED_PLATFORMS_URL}"
+	$(call log_message,INFO - Platforms JSON file downloaded successfully.)
+
+setup: download-platforms vault-proto publisher-proto grpc-compile
+	$(call log_message,INFO - Setup completed.)
