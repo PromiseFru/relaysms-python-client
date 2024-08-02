@@ -362,12 +362,12 @@ def publish_message(message, platform, dry_run=False):
         logger.error("%s", pub_res.message)
         sys.exit(1)
 
-    decoded_publisher_response = decode_and_decrypt_payload(
-        pub_res.publisher_response, pub_keypair.get_public_key()
-    )
+    # decoded_publisher_response = decode_and_decrypt_payload(
+    #     pub_res.publisher_response, pub_keypair.get_public_key()
+    # )
 
     logger.info("%s", pub_res.message)
-    logger.info("Publisher Says: %s", decoded_publisher_response)
+    logger.info("Publisher Says: %s", pub_res.publisher_response)
     sys.exit(0)
 
 

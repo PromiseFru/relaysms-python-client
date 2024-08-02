@@ -210,7 +210,7 @@ def encrypt_and_encode_payload(
         state = States.deserialize(load_binary(state_file_path))
 
     header, content_ciphertext = Ratchets.encrypt(
-        state, content.encode("utf-8"), peer_publish_pub_key
+        state=state, data=content.encode("utf-8"), AD=peer_publish_pub_key
     )
 
     serialized_header = header.serialize()
@@ -246,7 +246,10 @@ def decode_and_decrypt_payload(content, publish_pub_key):
 
     encrypted_content = payload[4 + len_header :]
     plaintext = Ratchets.decrypt(
-        state, deserialized_header, encrypted_content, publish_pub_key
+        state=state,
+        header=deserialized_header,
+        ciphertext=encrypted_content,
+        AD=publish_pub_key,
     )
     return plaintext.decode("utf-8")
 
