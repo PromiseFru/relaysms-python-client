@@ -175,8 +175,8 @@ def compute_device_id(secret_key, phone_number, device_id_public_key):
     Returns:
         bytes: The computed device ID.
     """
-    combined_input = phone_number + device_id_public_key
-    hmac_object = hmac.new(secret_key, combined_input.encode("utf-8"), hashlib.sha256)
+    combined_input = phone_number.encode("utf-8") + device_id_public_key
+    hmac_object = hmac.new(secret_key, combined_input, hashlib.sha256)
     return hmac_object.digest()
 
 

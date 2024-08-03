@@ -326,9 +326,7 @@ def publish_message(message, platform, dry_run=False):
     pub_shared_key = pub_keypair.agree(base64.b64decode(server_pub_pk))
 
     device_id = compute_device_id(
-        did_shared_key,
-        phone_number,
-        base64.b64encode(did_keypair.get_public_key()).decode("utf-8"),
+        did_shared_key, phone_number, did_keypair.get_public_key()
     )
 
     payload, state = encrypt_and_encode_payload(
