@@ -16,7 +16,8 @@ from publisher_client import (
     get_oauth2_auth_url,
     exchange_oauth2_auth_code,
     publish_content,
-    revoke_access_token,
+    revoke_oauth2_access_token,
+    revoke_pnba_access_token,
     get_pnba_code,
     exchange_pnba_auth_code,
 )
@@ -328,6 +329,7 @@ def publish_message(message, platform, dry_run=False):
     device_id = compute_device_id(
         did_shared_key, phone_number, did_keypair.get_public_key()
     )
+    # device_id = b""
 
     payload, state = encrypt_and_encode_payload(
         pub_shared_key,
@@ -343,11 +345,11 @@ def publish_message(message, platform, dry_run=False):
     if dry_run:
         logger.info("Transmission Content: %s", trans_content)
         publisher_response = input("Enter Publisher's response: ")
-        decoded_publisher_response = decode_and_decrypt_payload(
-            publisher_response, pub_keypair.get_public_key()
-        )
+        # decoded_publisher_response = decode_and_decrypt_payload(
+        #     publisher_response, pub_keypair.get_public_key()
+        # )
 
-        logger.info("Publisher Says: %s", decoded_publisher_response)
+        logger.info("Publisher Says: %s", publisher_response)
         sys.exit(0)
 
     pub_res, pub_err = publish_content(trans_content)
@@ -384,22 +386,53 @@ def revoke_tokens(platform, account):
         account (str): The account identifier associated with the token
     """
     llt = get_llt()
-    revoke_res, revoke_err = revoke_access_token(
-        long_lived_token=llt,
-        platform=platform,
-        account=account,
-    )
 
-    if revoke_err:
-        logger.error("%s - %s", revoke_err.code(), revoke_err.details())
-        sys.exit(1)
+    platform_info = load_json("platforms.json")
+    platform_details = next((p for p in platform_info if p["name"] == platform), None)
 
-    if not revoke_res.success:
-        logger.error("%s", revoke_res.message)
-        sys.exit(1)
+    if not platform_details:
+        raise ValueError(f"Platform '{platform}' not found.")
 
-    logger.info("%s", revoke_res.message)
-    sys.exit(0)
+    def handle_oauth2():
+        revoke_res, revoke_err = revoke_oauth2_access_token(
+            long_lived_token=llt,
+            platform=platform,
+            account=account,
+        )
+
+        if revoke_err:
+            logger.error("%s - %s", revoke_err.code(), revoke_err.details())
+            sys.exit(1)
+
+        if not revoke_res.success:
+            logger.error("%s", revoke_res.message)
+            sys.exit(1)
+
+        logger.info("%s", revoke_res.message)
+        sys.exit(0)
+
+    def handle_pnba():
+        revoke_res, revoke_err = revoke_pnba_access_token(
+            long_lived_token=llt,
+            platform=platform,
+            account=account,
+        )
+
+        if revoke_err:
+            logger.error("%s - %s", revoke_err.code(), revoke_err.details())
+            sys.exit(1)
+
+        if not revoke_res.success:
+            logger.error("%s", revoke_res.message)
+            sys.exit(1)
+
+        logger.info("%s", revoke_res.message)
+        sys.exit(0)
+
+    if platform_details["protocol_type"] == "oauth2":
+        handle_oauth2()
+    elif platform_details["protocol_type"] == "pnba":
+        handle_pnba()
 
 
 def delete_entity():

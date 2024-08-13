@@ -111,7 +111,7 @@ def publish_content(content, **kwargs):
 
 
 @grpc_call
-def revoke_access_token(long_lived_token, platform, account, **kwargs):
+def revoke_oauth2_access_token(long_lived_token, platform, account, **kwargs):
     """Request for revoking and deleting an entity's access token in the vault"""
     stub = kwargs["stub"]
     request = publisher_pb2.RevokeAndDeleteOAuth2TokenRequest(
@@ -121,6 +121,20 @@ def revoke_access_token(long_lived_token, platform, account, **kwargs):
     )
 
     response = stub.RevokeAndDeleteOAuth2Token(request)
+    return response, None
+
+
+@grpc_call
+def revoke_pnba_access_token(long_lived_token, platform, account, **kwargs):
+    """Request for revoking and deleting an entity's access token in the vault"""
+    stub = kwargs["stub"]
+    request = publisher_pb2.RevokeAndDeletePNBATokenRequest(
+        long_lived_token=long_lived_token,
+        platform=platform,
+        account_identifier=account,
+    )
+
+    response = stub.RevokeAndDeletePNBAToken(request)
     return response, None
 
 
